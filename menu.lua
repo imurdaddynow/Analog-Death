@@ -2,17 +2,13 @@ local lg = love.graphics
 
 local menu = {}
 
--- Parallax background layers
-local bgLayers = {
-    { color = {0.08, 0.09, 0.13}, speed = 0.2 },
-    { color = {0.13, 0.15, 0.22}, speed = 0.4 },
-    { color = {0.18, 0.20, 0.30}, speed = 0.7 }
-}
-
 local crtIntensity = 0.23
-
 local state = "main" -- or "settings"
 
+-- Fonts (will be set in menu.load)
+local titleFont, buttonFont
+
+-- Button definitions
 local buttons = {
     play = {
         w = 220, h = 80, text = "PLAY", rainbowT = 0, baseScale = 1.0, hoverScale = 1.12, scale = 1.0
@@ -27,7 +23,6 @@ local buttons = {
         w = 220, h = 60, text = "BACK", rainbowT = 0, baseScale = 1.0, hoverScale = 1.10, scale = 1.0
     }
 }
-
 local buttonOrder = {"play", "settings", "exit"}
 
 local slider = {
@@ -36,21 +31,14 @@ local slider = {
     dragging = false
 }
 
-local titleFont, buttonFont
-
 function menu.load()
-    lg.setBackgroundColor(0.08, 0.09, 0.13)
     titleFont = lg.newFont(64)
     buttonFont = lg.newFont(36)
-    -- Set slider and back button positions
-    buttons.back.x = (lg.getWidth() - buttons.back.w) / 2
-    buttons.back.y = lg.getHeight() * 0.75
-    slider.x = (lg.getWidth() - slider.w) / 2
     slider.y = lg.getHeight() * 0.55
+    slider.x = (lg.getWidth() - slider.w) / 2
 end
 
 local function layoutVerticalButtons()
-    -- Stack buttons vertically on the left, with dynamic gaps and dynamic heights
     local gap = 32
     local totalHeight = 0
     for _, name in ipairs(buttonOrder) do
@@ -68,68 +56,8 @@ local function layoutVerticalButtons()
         btn.y = y
         y = y + btn.h * btn.scale + gap
     end
-end
-
-function menu.update(dt)
-    -- Parallax effect
-    local mx, my = love.mouse.getPosition()
-    for i, layer in ipairs(bgLayers) do
-        layer.offsetX = (mx / lg.getWidth() - 0.5) * 60 * layer.speed
-        layer.offsetY = (my / lg.getHeight() - 0.5) * 40 * layer.speed
-    end
-
-    if state == "main" then
-        layoutVerticalButtons()
-        for _, name in ipairs(buttonOrder) do
-            local btn = buttons[name]
-            btn.hovered = mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h
-            if btn.hovered then
-                btn.scale = btn.scale + (btn.hoverScale - btn.scale) * 0.5
-                btn.rainbowT = btn.rainbowT + dt * 2
-            else
-                btn.scale = btn.scale + (btn.baseScale - btn.scale) * 0.5
-                btn.rainbowT = 0
-            end
-        end
-    elseif state == "settings" then
-        local btn = buttons.back
-        btn.hovered = mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h
-        if btn.hovered then
-            btn.scale = btn.scale + (btn.hoverScale - btn.scale) * 0.5
-            btn.rainbowT = btn.rainbowT + dt * 2
-        else
-            btn.scale = btn.scale + (btn.baseScale - btn.scale) * 0.5
-            btn.rainbowT = 0
-        end
-    end
-end
-
-local function rainbow(t)
-    local r = math.abs(math.sin(t * 1.2 + 0)) * 0.7 + 0.3
-    local g = math.abs(math.sin(t * 1.2 + 2)) * 0.7 + 0.3
-    local b = math.abs(math.sin(t * 1.2 + 4)) * 0.7 + 0.3
-    return r, g, b
-end
-
-local function layoutVerticalButtons()
-    -- Stack buttons vertically on the left, with dynamic gaps and dynamic heights
-    local gap = 32
-    local totalHeight = 0
-    for _, name in ipairs(buttonOrder) do
-        local btn = buttons[name]
-        totalHeight = totalHeight + btn.h * btn.scale
-    end
-    local totalGap = gap * (#buttonOrder - 1)
-    local groupHeight = totalHeight + totalGap
-    local startY = (lg.getHeight() - groupHeight) / 2
-    local x = 60
-    local y = startY
-    for _, name in ipairs(buttonOrder) do
-        local btn = buttons[name]
-        btn.x = x
-        btn.y = y
-        y = y + btn.h * btn.scale + gap
-    end
+    buttons.back.x = x
+    buttons.back.y = y + 40
 end
 
 local function drawButton(btn)
@@ -148,39 +76,54 @@ local function drawButton(btn)
         lg.setColor(0.13, 0.15, 0.22, 1.0)
     end
     lg.rectangle("fill", -btn.w/2, -btn.h/2, btn.w, btn.h, 0, 0)
-    -- Border
+    -- Border (no rainbow effect)
     lg.setLineWidth(6)
-    if btn.hovered then
-        lg.setColor(rainbow(btn.rainbowT))
-    else
-        lg.setColor(0.4, 0.7, 1.0)
-    end
+    lg.setColor(0.4, 0.7, 1.0)
     lg.rectangle("line", -btn.w/2, -btn.h/2, btn.w, btn.h, 0, 0)
-    -- Text
+    -- Text (no rainbow effect)
     lg.setFont(buttonFont)
-    if btn.hovered then
-        lg.setColor(rainbow(btn.rainbowT))
-    else
-        lg.setColor(1, 1, 1)
-    end
+    lg.setColor(1, 1, 1)
     lg.printf(btn.text, -btn.w/2, -btn.h/2 + btn.h/2 - 24, btn.w, "center")
     lg.pop()
 end
 
-function menu.draw()
-    -- Parallax background
-    for i, layer in ipairs(bgLayers) do
-        lg.setColor(layer.color)
-        lg.rectangle("fill", layer.offsetX or 0, layer.offsetY or 0, lg.getWidth(), lg.getHeight())
-    end
+function menu.update(dt)
+    local mx, my = lg.getWidth()/2, lg.getHeight()/2
+    if love.mouse then mx, my = love.mouse.getPosition() end
 
+    layoutVerticalButtons()
+
+    if state == "main" then
+        for _, name in ipairs(buttonOrder) do
+            local btn = buttons[name]
+            btn.hovered = mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h
+            if btn.hovered then
+                btn.scale = btn.scale + (btn.hoverScale - btn.scale) * 0.5
+            else
+                btn.scale = btn.scale + (btn.baseScale - btn.scale) * 0.5
+            end
+        end
+    elseif state == "settings" then
+        -- Ensure slider is centered when entering settings
+        slider.x = (lg.getWidth() - slider.w) / 2
+        slider.y = lg.getHeight() * 0.55
+        local btn = buttons.back
+        btn.hovered = mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h
+        if btn.hovered then
+            btn.scale = btn.scale + (btn.hoverScale - btn.scale) * 0.5
+        else
+            btn.scale = btn.scale + (btn.baseScale - btn.scale) * 0.5
+        end
+    end
+end
+
+function menu.draw()
     -- Title
     lg.setFont(titleFont)
     lg.setColor(1, 1, 1, 0.92)
-    lg.printf("ANALOG DEATH", 0, lg.getHeight() * 0.22, lg.getWidth(), "center")
+    lg.printf("[TITLE]", 0, lg.getHeight() * 0.22, lg.getWidth(), "center")
 
     if state == "main" then
-        layoutVerticalButtons()
         for _, name in ipairs(buttonOrder) do
             drawButton(buttons[name])
         end
@@ -219,6 +162,9 @@ function menu.mousepressed(x, y, buttonNum)
                 print("Play button pressed!")
             elseif buttons.settings.hovered then
                 state = "settings"
+                -- Center the slider when entering settings
+                slider.x = (lg.getWidth() - slider.w) / 2
+                slider.y = lg.getHeight() * 0.55
             elseif buttons.exit.hovered then
                 love.event.quit()
             end

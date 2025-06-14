@@ -1,4 +1,5 @@
 local menu = require("menu")
+local background = require("background")
 
 local crtShaderCode = [[
 #if defined(VERTEX) || __VERSION__ > 100 || defined(GL_FRAGMENT_PRECISION_HIGH)
@@ -132,10 +133,10 @@ local crtShader
 local menuCanvas
 
 function love.load()
-    local width, height = love.window.getDesktopDimensions()
-    love.window.setMode(width, height, {fullscreen = false, borderless = false, resizable = false})
-    crtShader = love.graphics.newShader(crtShaderCode)
+    love.window.setFullscreen(true)
+    background.load()
     menu.load()
+    crtShader = love.graphics.newShader(crtShaderCode)
     menuCanvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
 end
 
@@ -144,12 +145,14 @@ function love.resize(w, h)
 end
 
 function love.update(dt)
+    background.update(dt)
     menu.update(dt)
 end
 
 function love.draw()
     love.graphics.setCanvas(menuCanvas)
     love.graphics.clear()
+    background.draw()
     menu.draw()
     love.graphics.setCanvas()
 
